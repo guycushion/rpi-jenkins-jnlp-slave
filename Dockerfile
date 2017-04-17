@@ -5,25 +5,22 @@ RUN apt-get update && \
     apt-get install \
     curl \
     wget \
-    git && \
+    git \
+    net-tools && \
     apt-get clean && \ 
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-# Install Slave.jar
-ARG VERSION=3.7
-RUN curl --create-dirs -sSLo /usr/share/jenkins/slave.jar https://repo.jenkins-ci.org/public/org/jenkins-ci/main/remoting/${VERSION}/remoting-${VERSION}.jar \
-  && chmod 755 /usr/share/jenkins \
-  && chmod 644 /usr/share/jenkins/slave.jar
+ENV JENKINS_SWARM_VERSION 3.3
+ENV HOME /home/jenkins-slave
 
-COPY files/jenkins-slave /usr/local/bin/jenkins-slave
-RUN chmod +x /usr/local/bin/jenkins-slave
+RUN useradd -c "Jenkins Slave user" -d $HOME -m jenkins-slave
+RUN curl --create-dirs -sSLo /usr/share/jenkins/swarm-client-$JENKINS_SWARM_VERSION.jar https://repo.jenkins-ci.org/releases/org/jenkins-ci/plugins/swarm-client/$JENKINS_SWARM_VERSION/swarm-client-$JENKINS_SWARM_VERSION.jar \
+  && chmod 755 /usr/share/jenkins
 
-# Create Jenkins User
-RUN useradd jenkins -m -s /bin/bash
+COPY files/jenkins-slave.sh /usr/local/bin/jenkins-slave.sh
+RUN chmod +x /usr/local/bin/jenkins-slave.sh
 
-USER jenkins
-RUN mkdir /home/jenkins/.jenkins
-VOLUME /home/jenkins/.jenkins
-WORKDIR /home/jenkins
+USER jenkins-slave
+VOLUME /home/jenkins-slave
 
-ENTRYPOINT ["jenkins-slave"]
+ENTRYPOINT ["/usr/local/bin/jenkins-slave.sh"]
